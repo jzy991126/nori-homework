@@ -21,6 +21,7 @@
 #include <nori/object.h>
 #include <nori/frame.h>
 #include <nori/bbox.h>
+#include <nori/dpdf.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -32,6 +33,10 @@ NORI_NAMESPACE_BEGIN
  * as well as two local coordinate frames (one that corresponds to the true
  * geometry, and one that is used for shading computations).
  */
+
+
+
+
 struct Intersection {
     /// Position of the surface intersection
     Point3f p;
@@ -63,6 +68,15 @@ struct Intersection {
     std::string toString() const;
 };
 
+
+struct SampleData {
+    float pdf;
+    Point3f point;
+    Vector3f normal;
+    SampleData() = default;
+};
+
+
 /**
  * \brief Triangle mesh
  *
@@ -78,6 +92,8 @@ public:
 
     /// Initialize internal data structures (called once by the XML parser)
     virtual void activate();
+
+
 
     /// Return the total number of triangles in this shape
     uint32_t getTriangleCount() const { return (uint32_t) m_F.cols(); }
@@ -157,11 +173,17 @@ public:
     /// Return a human-readable summary of this instance
     std::string toString() const;
 
+
+    SampleData sampleSurface(const Point2f& sample);
+    
+
     /**
      * \brief Return the type of object (i.e. Mesh/BSDF/etc.)
      * provided by this instance
      * */
     EClassType getClassType() const { return EMesh; }
+
+
 
 protected:
     /// Create an empty mesh
@@ -176,6 +198,9 @@ protected:
     BSDF         *m_bsdf = nullptr;      ///< BSDF of the surface
     Emitter    *m_emitter = nullptr;     ///< Associated emitter, if any
     BoundingBox3f m_bbox;                ///< Bounding box of the mesh
+
+    DiscretePDF m_pdf;
+    float area;
 };
 
 NORI_NAMESPACE_END

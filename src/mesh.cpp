@@ -38,6 +38,14 @@ void Mesh::activate() {
         m_bsdf = static_cast<BSDF *>(
             NoriObjectFactory::createInstance("diffuse", PropertyList()));
     }
+
+    uint32_t count = getTriangleCount();
+    m_pdf.reserve(count);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        m_pdf.append(surfaceArea(i));
+    }
+    m_pdf.normalize();
 }
 
 float Mesh::surfaceArea(uint32_t index) const {
@@ -116,6 +124,7 @@ void Mesh::addChild(NoriObject *obj) {
                     throw NoriException(
                         "Mesh: tried to register multiple Emitter instances!");
                 m_emitter = emitter;
+                m_emitter->setMesh(this);
             }
             break;
 
@@ -162,6 +171,26 @@ std::string Intersection::toString() const {
         indent(geoFrame.toString()),
         mesh ? mesh->toString() : std::string("null")
     );
+}
+
+SampleData Mesh::sampleSurface(const Point2f& sample)
+{
+    SampleData res;
+
+    uint32_t index = m_pdf.sample(sample.x());
+
+    float alpha = 1 - sqrt(1 - sample.x());
+    float beta = sample.y() * sqrt(1 - sample.x());
+    float theta = 1 - alpha - beta;
+
+    Point3f a(m_V.col(m_F(0, index))), b(m_V.col(m_F(1, index))), c( m_V.col(m_F(2, index)));
+
+    res.point = a * alpha + b * beta + c * theta;
+    res.pdf = 1.0 / m_pdf.getSum();
+    res.normal = ((a - b).cross(a - c)).normalized();
+
+    return res;
+
 }
 
 NORI_NAMESPACE_END

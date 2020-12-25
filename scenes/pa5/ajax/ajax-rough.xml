@@ -15,6 +15,7 @@
             <float name="intIOR" value="1.7"/>
             <color name="kd" value="0.2 0.2 0.4"/>
             <float name="alpha" value="0.28"/>
+			<color name="albedo" value="0.2 0.2 0.2"/>
 		</bsdf>
 	</mesh>
 

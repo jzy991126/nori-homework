@@ -48,19 +48,100 @@ public:
         m_ks = 1 - m_kd.maxCoeff();
     }
 
+    float evalBeckmann(const Normal3f& m) const {
+        float temp = Frame::tanTheta(m) / m_alpha, ct = Frame::cosTheta(m),
+            ct2 = ct * ct;
+
+        return std::exp(-temp * temp) / (M_PI * m_alpha * m_alpha * ct2 * ct2);
+    }
+
+
+    float smithBeckmannG1(const Vector3f& v, const Normal3f& m) const {
+        float tanTheta = Frame::tanTheta(v);
+
+        /* Perpendicular incidence -- no shadowing/masking */
+        if (tanTheta == 0.0f)
+            return 1.0f;
+
+        /* Can't see the back side from the front and vice versa */
+        if (m.dot(v) * Frame::cosTheta(v) <= 0)
+            return 0.0f;
+
+        float a = 1.0f / (m_alpha * tanTheta);
+        if (a >= 1.6f)
+            return 1.0f;
+        float a2 = a * a;
+
+        /* Use a fast and accurate (<0.35% rel. error) rational
+         approximation to the shadowing-masking function */
+        return (3.535f * a + 2.181f * a2) / (1.0f + 2.276f * a + 2.577f * a2);
+    }
+
+
+
     /// Evaluate the BRDF for the given pair of directions
     Color3f eval(const BSDFQueryRecord &bRec) const {
-    	throw NoriException("MicrofacetBRDF::eval(): not implemented!");
+        if (bRec.measure != ESolidAngle || Frame::cosTheta(bRec.wi) <= 0
+            || Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.0f);
+
+        float cos_theta_i = Frame::cosTheta(bRec.wi);
+        float cos_theta_o = Frame::cosTheta(bRec.wo);
+
+        Normal3f wh = (bRec.wi + bRec.wo).normalized();
+
+        float Dh = Warp::squareToBeckmannPdf(wh, m_alpha);
+        float F = fresnel(wh.dot(bRec.wi), m_extIOR, m_intIOR);
+        float G = smithBeckmannG1(bRec.wi, wh) * smithBeckmannG1(bRec.wo, wh);
+
+        float cos2 = cos_theta_i * cos_theta_o;
+        if (cos2 < 0) {
+            cos2 = -cos2;
+        }
+
+        return m_kd / M_PI + m_ks * (Dh * F * G) / (4.f * cos2);
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
     float pdf(const BSDFQueryRecord &bRec) const {
-    	throw NoriException("MicrofacetBRDF::pdf(): not implemented!");
+        Normal3f wh = (bRec.wi + bRec.wo).normalized();
+
+        float Dh = Warp::squareToBeckmannPdf(wh, m_alpha);
+
+        float cos_theta_h = std::max(Frame::cosTheta(wh),0.0f);
+        float cos_theta_o = std::max(Frame::cosTheta(bRec.wo),.0f);
+
+        float J = 1 / (4 * wh.dot(bRec.wo));
+         
+        float res = m_ks * Dh * cos_theta_h * J + (1 - m_ks) * cos_theta_o / M_PI;
+
+        return res;
     }
 
     /// Sample the BRDF
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const {
-    	throw NoriException("MicrofacetBRDF::sample(): not implemented!");
+        bRec.measure = ESolidAngle;
+
+        Point2f sample(_sample);
+        if (sample(0) <= m_ks) {
+            //Specular
+            sample(0) = sample(0) / m_ks; // transform sample into range [0;1]
+            Normal3f n = Warp::squareToBeckmann(sample, m_alpha);
+            bRec.wo = 2 * n.dot(bRec.wi) * n - bRec.wi;
+        }
+        else {
+            //Diffuse
+            sample(0) = (sample(0) - m_ks) / (1 - m_ks); // transform sample into range [0;1]
+            bRec.wo = Warp::squareToCosineHemisphere(sample);
+        }
+        /*
+        if (Frame::cosTheta(bRec.wi) <=0 || Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.0f);
+            */
+        if (pdf(bRec) > 0)
+            return eval(bRec) / pdf(bRec) * Frame::cosTheta(bRec.wo);
+        else
+            return Color3f(0.f);
 
         // Note: Once you have implemented the part that computes the scattered
         // direction, the last part of this function should simply return the

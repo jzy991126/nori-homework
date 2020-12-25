@@ -50,6 +50,15 @@ void Scene::activate() {
             NoriObjectFactory::createInstance("independent", PropertyList()));
     }
 
+
+    for (int i = 0; i < m_meshes.size(); i++)
+    {
+        if (m_meshes[i]->isEmitter())
+        {
+            m_emmit_meshes.push_back(m_meshes[i]);
+        }
+    }
+
     cout << endl;
     cout << "Configuration: " << toString() << endl;
     cout << endl;

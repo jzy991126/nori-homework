@@ -22,10 +22,45 @@
 
 NORI_NAMESPACE_BEGIN
 
+
+
+struct EmitterQueryRecord {
+    /// Origin point from which we sample the emitter
+    Point3f ref;
+    /// Sampled point on the emitter
+    Point3f p;
+    /// Normal at the emitter point
+    Normal3f n;
+    /// Direction between the hit point and the emitter point
+    Vector3f wi;
+    /// Probability
+    float pdf;
+    /// Shadow ray
+    Ray3f shadowRay;
+
+    /// Create an unitialized query record
+    EmitterQueryRecord() = default;
+
+    /// Create a new query record that can be used to sample a emitter
+    EmitterQueryRecord(const Point3f& ref) : ref(ref) { }
+
+    /**
+     * \brief Create a query record that can be used to query the
+     * sampling density after having intersected an area emitter
+     */
+    EmitterQueryRecord(const Point3f& ref, const Point3f& p, const Normal3f& n) :
+        ref(ref), p(p), n(n) {
+        wi = (p - ref).normalized();
+    }
+};
+
 /**
  * \brief Superclass of all emitters
  */
 class Emitter : public NoriObject {
+
+protected:
+    Mesh* m_mesh;
 public:
 
     /**
@@ -33,6 +68,15 @@ public:
      * provided by this instance
      * */
     EClassType getClassType() const { return EEmitter; }
+
+    virtual Color3f sample(EmitterQueryRecord& IRec, const Point2f& sample) const = 0;
+
+    virtual Color3f eval(const EmitterQueryRecord& lRec) const = 0;
+
+
+    virtual float pdf(const EmitterQueryRecord& lRec) const = 0;
+
+    void setMesh(Mesh* mesh) { m_mesh = mesh; }
 };
 
 NORI_NAMESPACE_END

@@ -19,6 +19,8 @@
 #pragma once
 
 #include <nori/mesh.h>
+#include "nori/membree.h"
+#include <unordered_map>
 
 NORI_NAMESPACE_BEGIN
 
@@ -66,8 +68,10 @@ public:
     bool rayIntersect(const Ray3f &ray, Intersection &its, bool shadowRay) const;
 
 private:
-    Mesh         *m_mesh = nullptr; ///< Mesh (only a single one for now)
     BoundingBox3f m_bbox;           ///< Bounding box of the entire scene
+    M_embree embree;
+
+    std::unordered_map<unsigned int, Mesh*> dic;
 };
 
 NORI_NAMESPACE_END

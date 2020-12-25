@@ -25,3 +25,16 @@ rules.ninja
 *.opendb
 Debug
 x64
+.idea/
+bin/
+cmake-build-debug/
+cmake-build-debug-mingw/
+cmake-build-debug-visual-studio/
+nori_html/
+scenes/pa2/ajax.obj
+*.exr
+*.png
+scenes/pa3/ajax.obj
+scenes/pa5/ajax/ajax.obj
+nori.txt
+nori.udb

@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 3.2)
 project(nori)
 
 add_subdirectory(ext ext_build)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 include_directories(
   # Nori include files
@@ -64,6 +66,7 @@ add_executable(nori
   include/nori/transform.h
   include/nori/vector.h
   include/nori/warp.h
+  "include/nori/membree.h"
 
   # Source code files
   src/bitmap.cpp
@@ -88,7 +91,8 @@ add_executable(nori
   src/microfacet.cpp
   src/mirror.cpp
   src/dielectric.cpp
-)
+  src/normals.cpp
+  "src/membree.cpp" "src/simple.cpp" "src/ao.cpp" "src/area.cpp" "src/whitted.cpp" "src/path_mats.cpp" "src/path_ems.cpp" "src/path_mis.cpp")
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
 
@@ -101,15 +105,18 @@ add_executable(warptest
   src/object.cpp
   src/proplist.cpp
   src/common.cpp
-)
+  )
+
+  
+find_package(embree 3.0 REQUIRED)
 
 if (WIN32)
-  target_link_libraries(nori tbb_static pugixml IlmImf nanogui ${NANOGUI_EXTRA_LIBS} zlibstatic)
+  target_link_libraries(nori tbb_static pugixml IlmImf nanogui ${NANOGUI_EXTRA_LIBS} zlibstatic embree)
 else()
-  target_link_libraries(nori tbb_static pugixml IlmImf nanogui ${NANOGUI_EXTRA_LIBS})
+  target_link_libraries(nori tbb_static pugixml IlmImf nanogui ${NANOGUI_EXTRA_LIBS} embree)
 endif()
 
-target_link_libraries(warptest tbb_static nanogui ${NANOGUI_EXTRA_LIBS})
+target_link_libraries(warptest tbb_static nanogui ${NANOGUI_EXTRA_LIBS} embree)
 
 # Force colored output for the ninja generator
 if (CMAKE_GENERATOR STREQUAL "Ninja")
